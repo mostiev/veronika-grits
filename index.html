@@ -32,7 +32,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* header */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .top-in{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px var(--gutter)}
-.brand{display:block;line-height:0}
+.brand{display:block;line-height:0;cursor:pointer}
+.brand img{transition:opacity .15s,transform .15s}
+.brand:hover img{opacity:.7;transform:rotate(-2deg) scale(1.03)}
 .brand img{height:64px;width:auto}
 .nav{display:flex;gap:clamp(14px,2.4vw,32px);font-size:15px}
 .nav a{color:var(--ink);transition:color .15s}
