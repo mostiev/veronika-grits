@@ -59,8 +59,9 @@ main{padding:0 var(--gutter) 80px}
 .tags a.on{color:var(--accent);font-weight:500}
 .desc{max-width:58ch;margin:36px auto 0;text-align:center;color:var(--desc);font-size:14px}
 .desc:empty{display:none}
-.gallery{columns:3;column-gap:clamp(16px,2.6vw,36px);margin-top:clamp(32px,5vw,56px)}
-.card{break-inside:avoid;margin-bottom:clamp(16px,2.6vw,36px);display:block;width:100%;text-align:left;cursor:zoom-in;position:relative}
+.gallery{--gap:clamp(16px,2.6vw,36px);display:flex;align-items:flex-start;gap:var(--gap);margin-top:clamp(32px,5vw,56px)}
+.gcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--gap)}
+.card{display:block;width:100%;text-align:left;cursor:zoom-in;position:relative}
 .card img{width:100%;height:auto;background:#f4f4f4;transition:opacity .2s}
 .card:hover img{opacity:.88}
 .card .multi{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.9);border-radius:10px;padding:2px 8px 2px 6px;font-size:12px;color:var(--ink)}
@@ -104,17 +105,14 @@ main{padding:0 var(--gutter) 80px}
 .soon{text-align:center;margin-top:clamp(70px,12vw,140px);color:var(--muted)}
 .soon a{color:var(--accent)}
 
-@media (min-width:1280px){.gallery{columns:4}}
 @media (max-width:700px){
   .top-in{flex-direction:column;align-items:flex-start;gap:10px;padding-top:14px;padding-bottom:12px}
   .brand img{height:44px}
   .nav{font-size:14px;gap:18px}
   .about{grid-template-columns:1fr}
   .about-text{font-size:16px}
-  .gallery{columns:2;column-gap:12px}
-  .gallery.single{columns:1}
-  .gallery.single .card{margin-bottom:28px}
-  .card{margin-bottom:12px}
+  .gallery{--gap:12px}
+  .gallery.single{--gap:28px}
   .lb-arrow{width:40px;height:40px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -186,7 +184,7 @@ main{padding:0 var(--gutter) 80px}
   <div class="lb-cap"><div class="lb-title" id="lbTitle"></div><div class="lb-desc" id="lbDesc"></div><div class="lb-count" id="lbCount"></div></div>
 </div>
 
-<script src="data.js?v=4"></script>
+<script src="data.js?v=6"></script>
 <script>
 (function(){
 const S = window.SITE;
@@ -242,7 +240,40 @@ function layoutHome(){
 
 // ---------- portfolio ----------
 const stackIcon = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="4.5" width="9" height="9" rx="1"/><path d="M5 2.5h7.5a1 1 0 011 1V11"/></svg>';
-let seq = [];
+let seq = [], curWorks = [], curStart = [], lastCols = 0;
+function galleryCols(){
+  const w = window.innerWidth, g = $('gallery');
+  if (w <= 700) return g.classList.contains('single') ? 1 : 2;
+  return w >= 1280 ? 4 : 3;
+}
+// раскладка по строкам: каждая следующая работа — в самую короткую колонку,
+// поэтому порядок (чередование работ и фото процесса) сохраняется на любом экране
+function layoutGallery(){
+  const n = galleryCols(); if (n === lastCols) return; lastCols = n;
+  const cols = Array.from({length:n}, () => []), hs = new Array(n).fill(0), last = new Array(n).fill(null);
+  const kind = w => w.p ? 'p' : 'a';
+  curWorks.forEach((w, i) => {
+    // среди колонок, которые почти одинаково короткие, выбираем ту, где сверху и по соседству
+    // нет фото того же типа (процесс / работа) или кадра той же работы
+    const min = Math.min(...hs);
+    let c = 0, best = Infinity;
+    hs.forEach((h, k) => {
+      if (h > min + 1.1) return;
+      let score = h - min;
+      const L = last[k];
+      if (L && (L.t === w.t)) score += 3;
+      if (L && w.p && kind(L) === "p") score += 4;
+      [k-1, k+1].forEach(j => { const N = last[j]; if (N && Math.abs(hs[j] - h) < 0.5 && (N.t === w.t || (w.p && kind(N) === 'p'))) score += 1; });
+      if (score < best) { best = score; c = k; }
+    });
+    last[c] = w;
+    const im = w.img[0];
+    const multi = w.img.length > 1 ? `<span class="multi">${stackIcon}${w.img.length}</span>` : '';
+    cols[c].push(`<button class="card" data-s="${curStart[i]}" aria-label="${w.t}"><img src="${im.m}" width="${im.w}" height="${im.h}" alt="${w.t}" loading="lazy">${multi}</button>`);
+    hs[c] += im.h / im.w + 0.08;
+  });
+  $('gallery').innerHTML = cols.map(c => `<div class="gcol">${c.join('')}</div>`).join('');
+}
 function renderPortfolio(kind, slug){
   const list = kind === 'tag' ? S.tags : S.sections;
   const cur = list.find(x => x.slug === slug) || S.sections[0];
@@ -254,11 +285,8 @@ function renderPortfolio(kind, slug){
   // плоская последовательность всех кадров для листания в просмотре
   seq = []; const start = [];
   cur.works.forEach(w => { start.push(seq.length); w.img.forEach((im, k) => seq.push({w, k})); });
-  g.innerHTML = cur.works.map((w,i) => {
-    const im = w.img[0];
-    const multi = w.img.length > 1 ? `<span class="multi">${stackIcon}${w.img.length}</span>` : '';
-    return `<button class="card" data-s="${start[i]}" aria-label="${w.t}"><img src="${im.m}" width="${im.w}" height="${im.h}" alt="${w.t}" loading="lazy">${multi}</button>`;
-  }).join('');
+  curWorks = cur.works; curStart = start; lastCols = 0;
+  layoutGallery();
   g.onclick = e => { const b = e.target.closest('.card'); if (b) openLb(+b.dataset.s); };
 }
 
@@ -314,7 +342,7 @@ if (LINKS.tg) $('tg').href = LINKS.tg;
 if (LINKS.behance) $('behance').href = LINKS.behance;
 
 window.addEventListener('hashchange', route);
-let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('v-home').hidden) layoutHome(); }, 120); });
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('v-home').hidden) layoutHome(); if (!$('v-portfolio').hidden) layoutGallery(); }, 120); });
 route();
 })();
 </script>
