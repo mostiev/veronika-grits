@@ -31,8 +31,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* header */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.top-in{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:22px var(--gutter)}
-.brand{font-weight:500;font-size:16px;letter-spacing:.01em}
+.top-in{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px var(--gutter)}
+.brand{display:block;line-height:0}
+.brand img{height:64px;width:auto}
 .nav{display:flex;gap:clamp(14px,2.4vw,32px);font-size:15px}
 .nav a{color:var(--ink);transition:color .15s}
 .nav a:hover{color:var(--accent)}
@@ -105,7 +106,8 @@ main{padding:0 var(--gutter) 80px}
 
 @media (min-width:1280px){.gallery{columns:4}}
 @media (max-width:700px){
-  .top-in{flex-direction:column;align-items:flex-start;gap:8px;padding-top:16px;padding-bottom:14px}
+  .top-in{flex-direction:column;align-items:flex-start;gap:10px;padding-top:14px;padding-bottom:12px}
+  .brand img{height:44px}
   .nav{font-size:14px;gap:18px}
   .about{grid-template-columns:1fr}
   .about-text{font-size:16px}
@@ -124,7 +126,7 @@ main{padding:0 var(--gutter) 80px}
 <body>
 <header class="top">
   <div class="top-in">
-    <a class="brand" href="#">Грицай Вероника</a>
+    <a class="brand" href="#" aria-label="Вероника Грицай — на главную"><img src="logo.png" width="396" height="244" alt="Вероника Грицай"></a>
     <nav class="nav">
       <a href="#zhivopis" data-nav="portfolio">Портфолио</a>
       <a href="#shop" data-nav="shop">Магазин</a>
@@ -184,7 +186,7 @@ main{padding:0 var(--gutter) 80px}
   <div class="lb-cap"><div class="lb-title" id="lbTitle"></div><div class="lb-desc" id="lbDesc"></div><div class="lb-count" id="lbCount"></div></div>
 </div>
 
-<script src="data.js?v=3"></script>
+<script src="data.js?v=4"></script>
 <script>
 (function(){
 const S = window.SITE;
@@ -218,20 +220,22 @@ function layoutHome(){
       a.appendChild(im); c.appendChild(a);
     });
   }
-  const ys = Array.from({length: cols}, () => r()*slot*0.45);
+  const ys = Array.from({length: cols}, () => r()*slot*0.25);
+  const pad = slot*0.06;
   [...c.children].forEach((a, i) => {
     if (i >= count){ a.style.display = 'none'; return; }
     a.style.display = '';
     let col = 0; ys.forEach((v, k) => { if (v < ys[col]) col = k; });
     const img = homePicks[i].w.img[0];
-    const scale = 0.38 + r()*0.5;
+    const scale = 0.45 + r()*0.35;
     const w = slot * scale, h = w * img.h / img.w;
-    const x = col*slot + r()*(slot - w);
+    const x = col*slot + pad + r()*(slot - w - 2*pad);
     const y = ys[col];
     a.style.left = x+'px'; a.style.top = y+'px';
     a.style.width = w+'px'; a.style.height = h+'px';
     a.style.transitionDelay = (Math.min(i,20)*45)+'ms';
-    ys[col] = y + h + slot*(0.06 + r()*0.32);
+    // расстояние между работами — без крайностей: от 14% до 24% ширины колонки
+    ys[col] = y + h + slot*(0.14 + r()*0.10);
   });
   c.style.height = (Math.max(...ys) + 20) + 'px';
 }
